@@ -11,6 +11,7 @@ import "source-map-support/register";
 export let getRegistryEntryForPackage = async (
   packageName: string,
 ): Promise<any> => {
+  console.log(`Retrieving ${packageName} registry entry from upstream.`);
   return JSON.parse(
     await request.get({
       uri: "https://registry.npmjs.org/" + packageName,
