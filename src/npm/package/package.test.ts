@@ -1,7 +1,6 @@
 import * as AWS from "aws-sdk";
 import { handler, NpmPackage } from "./package";
 import * as sinon from 'sinon';
-import * as zlib from "zlib";
 
 describe("Package handler", () => {
 
@@ -12,12 +11,7 @@ describe("Package handler", () => {
 
     // prepare stub
     const metadata = { foo: 'bar' };
-    const CompressedRegistryData = zlib.deflateSync(JSON.stringify(metadata));
-    const response: any = { promise: () => Promise.resolve({ Item: { CompressedRegistryData } }) };
-    const documentClient: any = sinon.stub();
-    documentClient.get = sinon.stub(documentClient, 'get');
-    documentClient.get.returns(response);
-    npmPackage.documentClient = documentClient;
+    sinon.stub(npmPackage.cache, 'get').resolves(JSON.stringify(metadata));
 
     // get registry entry    
     const registryEntry: string = await npmPackage.getRegistryEntry();
@@ -29,34 +23,20 @@ describe("Package handler", () => {
     const npmPackageName = 'lodash';
     const npmPackage: NpmPackage = new NpmPackage(cacheUriPrefix, npmPackageName);
 
-
     // prepare stubs
     const getRegistryEntryFromNpmStub = sinon.stub();
     npmPackage.getRegistryEntryFromNpm = getRegistryEntryFromNpmStub;
     const expectedRegistryEntry = { versions: { "1.0": { dist: { tarball: "tarball" } } } };
     getRegistryEntryFromNpmStub.resolves(expectedRegistryEntry);
-
-    const documentClient: any = sinon.stub();
-    documentClient.get = sinon.stub();
-    documentClient.get.returns({ promise: () => Promise.reject() });
-    documentClient.put = sinon.stub();
-    documentClient.put.returns({ promise: () => Promise.resolve() });
-    npmPackage.documentClient = documentClient;
-    npmPackage.tableName = "table"
+    const getStub = sinon.stub(npmPackage.cache, 'get');
+    getStub.rejects();
+    const putStub = sinon.stub(npmPackage.cache, 'put');
+    putStub.resolves();
 
     // get registry entry    
     const registryEntry: string = await npmPackage.getRegistryEntry();
-    sinon.assert.calledWith(documentClient.get, {
-      Key: { PackageName: "lodash" },
-      TableName: "table"
-    });
-    sinon.assert.calledWith(documentClient.put, {
-      TableName: "table",
-      Item: {
-        PackageName: npmPackageName,
-        CompressedRegistryData: zlib.deflateSync(JSON.stringify(expectedRegistryEntry)),
-      }
-    });
+    sinon.assert.calledWith(getStub, 'lodash');
+    sinon.assert.calledWith(putStub, npmPackageName, expectedRegistryEntry);
     expect(JSON.parse(registryEntry)).toStrictEqual(expectedRegistryEntry);
 
   });

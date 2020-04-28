@@ -13,10 +13,39 @@ import * as zlib from "zlib";
 export const DDBDocClient = new DocumentClient();
 const tableName = process.env.DDB_TABLE!;
 
-export class NpmPackage {
+export class DDBCache {
 
   tableName: string = tableName;
+  
   documentClient: DocumentClient = DDBDocClient;
+
+  put(npmPackageName: string, registryEntry: any): Promise<any> {
+    return this.documentClient.put({
+      TableName: this.tableName,
+      Item: {
+        PackageName: npmPackageName,
+        CompressedRegistryData: zlib.deflateSync(JSON.stringify(registryEntry)),
+      },
+    }).promise()
+  }
+
+  get(npmPackageName: string): Promise<string> {
+    console.log(`Checking ${this.tableName} for existing ${npmPackageName} entry.`);
+    return this.documentClient.get({
+      TableName: this.tableName,
+      Key: { PackageName: npmPackageName },
+    }).promise().then(response => {
+      console.log("Existing package found; returning it.");
+      return zlib.inflateSync(response.Item!.CompressedRegistryData).toString();
+    });
+
+  }
+
+}
+
+export class NpmPackage {
+
+  cache: DDBCache = new DDBCache();
 
   constructor(
     public cacheUriPrefix: string,
@@ -33,24 +62,11 @@ export class NpmPackage {
     Object.keys(versions).forEach((key) => {
       versions[key]["dist"]["tarball"] = `${this.cacheUriPrefix}/${this.npmPackageName}/${key}`
     });
-    return this.documentClient.put({
-      TableName: this.tableName,
-      Item: {
-        PackageName: this.npmPackageName,
-        CompressedRegistryData: zlib.deflateSync(JSON.stringify(registryEntry)),
-      },
-    }).promise();
+    return this.cache.put(this.npmPackageName, registryEntry);
   }
 
   getRegistryEntryFromCache(): Promise<string> {
-    console.log(`Checking ${this.tableName} for existing ${this.npmPackageName} entry.`);
-    return this.documentClient.get({
-      TableName: this.tableName,
-      Key: { PackageName: this.npmPackageName },
-    }).promise().then(response => {
-        console.log("Existing package found; returning it.");
-        return zlib.inflateSync(response.Item!.CompressedRegistryData).toString();
-      });
+    return this.cache.get(this.npmPackageName);
   }
 
   /** 
