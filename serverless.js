@@ -58,25 +58,6 @@ async function getConfig() {
     "Type": "AWS::S3::Bucket",
     "DeletionPolicy": "Retain"
   }
-  const npmTableResourceName = "NpmTable";
-  npmResources[npmTableResourceName] = {
-    "Type": "AWS::DynamoDB::Table",
-    "Properties": {
-      "AttributeDefinitions": [
-        {
-          "AttributeName": "PackageName",
-          "AttributeType": "S"
-        }
-      ],
-      "KeySchema": [
-        {
-          "AttributeName": "PackageName",
-          "KeyType": "HASH"
-        }
-      ],
-      "BillingMode": "PAY_PER_REQUEST"
-    }
-  };
 
   const npmFunctions = {
     "npmHyphen": {
@@ -95,21 +76,29 @@ async function getConfig() {
     "npmPackage": {
       "handler": "src/npm/package/package.handler",
       "environment": {
-        "DDB_TABLE": {
-          "Ref": npmTableResourceName
+        "BUCKET_NAME": {
+          "Ref": npmStorageBucketResourceName
         }
       },
       "iamRoleStatements": [
         {
           "Action": [
-            "dynamodb:GetItem",
-            "dynamodb:PutItem"
+            "s3:GetObject",
+            "s3:PutObject"
           ],
           "Effect": "Allow",
           "Resource": {
-            "Fn::GetAtt": [
-              npmTableResourceName,
-              "Arn"
+            "Fn::Join": [
+              "",
+              [
+                {
+                  "Fn::GetAtt": [
+                    npmStorageBucketResourceName,
+                    "Arn"
+                  ]
+                },
+                "/*"
+              ]
             ]
           }
         }
@@ -129,8 +118,8 @@ async function getConfig() {
       "handler": "src/npm/autoupdate/autoupdate.handler",
       "timeout": 900,
       "environment": {
-        "DDB_TABLE": {
-          "Ref": npmTableResourceName
+        "BUCKET_NAME": {
+          "Ref": npmStorageBucketResourceName
         },
         "NPM_CACHE_DOWNLOAD_URI": {
           "Fn::Join": [
@@ -148,14 +137,34 @@ async function getConfig() {
       "iamRoleStatements": [
         {
           "Action": [
-            "dynamodb:PutItem",
-            "dynamodb:Scan"
+            "s3:ListBucket"
           ],
           "Effect": "Allow",
           "Resource": {
             "Fn::GetAtt": [
-              npmTableResourceName,
+              npmStorageBucketResourceName,
               "Arn"
+            ]
+          }
+        },
+        {
+          "Action": [
+            "s3:GetObject",
+            "s3:PutObject"
+          ],
+          "Effect": "Allow",
+          "Resource": {
+            "Fn::Join": [
+              "",
+              [
+                {
+                  "Fn::GetAtt": [
+                    npmStorageBucketResourceName,
+                    "Arn"
+                  ]
+                },
+                "/*"
+              ]
             ]
           }
         }
