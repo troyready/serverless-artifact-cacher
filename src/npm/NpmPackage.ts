@@ -1,6 +1,5 @@
 import * as request from "request-promise-native";
 import { S3Cache } from "./S3Cache";
-import { version } from "punycode";
 
 export class NpmPackage {
   cache: S3Cache = new S3Cache();
