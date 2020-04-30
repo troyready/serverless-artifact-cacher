@@ -20,4 +20,4 @@ export class NpmApp {
 }
 
 // app singleton
-export const app = new NpmApp();
+export const APP = new NpmApp();
