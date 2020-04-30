@@ -1,6 +1,5 @@
 import * as AWS from "aws-sdk";
 import { S3Cache } from "./S3Cache";
-import * as sinon from "sinon";
 import * as zlib from "zlib";
 
 describe("S3Cache", () => {
@@ -8,10 +7,10 @@ describe("S3Cache", () => {
     const registryEntry = "bar";
     const Body = zlib.gzipSync(registryEntry);
 
-    const putStub = sinon.stub();
-    putStub.returns({ promise: () => Promise.resolve() });
-    const getStub = sinon.stub();
-    getStub.returns({ promise: () => Promise.resolve({ Body }) });
+    const putStub = jest.fn();
+    putStub.mockReturnValue({ promise: () => Promise.resolve() });
+    const getStub = jest.fn();
+    getStub.mockReturnValue({ promise: () => Promise.resolve({ Body }) });
 
     const cache: S3Cache = new S3Cache(
       { getObject: getStub, putObject: putStub } as any,
@@ -21,21 +20,21 @@ describe("S3Cache", () => {
     const actual = await cache.get("foo");
 
     expect(actual).toBe(registryEntry);
-    sinon.assert.calledWith(putStub, {
+    expect(putStub).toHaveBeenCalledWith({
       Bucket: "bucketName",
       Key: "foo/index.gz",
       ContentType: "application/x-gzip",
       Body,
     });
-    sinon.assert.calledWith(getStub, {
+    expect(getStub).toHaveBeenCalledWith({
       Bucket: "bucketName",
       Key: "foo/index.gz",
     });
   });
 
   test("list packages", async () => {
-    const listStub = sinon.stub();
-    listStub.returns({
+    const listStub = jest.fn();
+    listStub.mockReturnValue({
       promise: () =>
         Promise.resolve({
           IsTruncated: false,
