@@ -1,9 +1,5 @@
-import * as AWS from "aws-sdk";
 import { NpmPackage } from "./NpmPackage";
 import * as sinon from "sinon";
-import * as zlib from "zlib";
-import { S3 } from "aws-sdk";
-import { S3Cache } from "./S3Cache";
 
 describe("NpmPackage", () => {
   let npmPackage: NpmPackage;
