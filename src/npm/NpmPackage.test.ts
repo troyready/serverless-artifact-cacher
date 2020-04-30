@@ -1,5 +1,6 @@
 import { NpmPackage } from "./NpmPackage";
 import * as sinon from "sinon";
+import { S3Cache } from "./S3Cache";
 
 describe("NpmPackage", () => {
   let npmPackage: NpmPackage;
@@ -15,13 +16,13 @@ describe("NpmPackage", () => {
     s3ListStub = sinon.stub();
     s3GetObjectStub = sinon.stub();
     s3PutObjectStub = sinon.stub();
-    npmPackage = new NpmPackage(cacheUriPrefix, npmPackageName);
-    npmPackage.getRegistryEntryFromNpm = getRegistryEntryFromNpmStub;
-    npmPackage.cache = {
+    const s3Cache: S3Cache = {
       list: s3ListStub,
       get: s3GetObjectStub,
       put: s3PutObjectStub,
     } as any;
+    npmPackage = new NpmPackage(s3Cache, cacheUriPrefix, npmPackageName);
+    npmPackage.getRegistryEntryFromNpm = getRegistryEntryFromNpmStub;
   });
 
   describe("getRegistryEntry", () => {

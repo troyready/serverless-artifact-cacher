@@ -2,14 +2,19 @@ import { S3 } from "aws-sdk";
 import * as zlib from "zlib";
 import { ListObjectsV2Request } from "aws-sdk/clients/s3";
 
-const BUCKET_NAME: string = process.env.BUCKET_NAME!;
 const INDEX_NAME: string = "index.gz";
 
+/*
+ * A registry entry cache backed by S3
+ */
 export class S3Cache {
-  bucketName: string = BUCKET_NAME;
   maxKeys: number | undefined = undefined;
-  s3: S3 = new S3();
 
+  constructor(private s3: S3, private bucketName: string) {}
+
+  /*
+   * stores the registry entry in the cache
+   */
   put(npmPackageName: string, registryEntry: string): Promise<any> {
     console.log(
       `Caching ${npmPackageName} registry entry in ${this.bucketName}.`,
@@ -24,6 +29,9 @@ export class S3Cache {
       .promise();
   }
 
+  /*
+   * gets the registry from the cache
+   */
   get(npmPackageName: string): Promise<string> {
     console.log(
       `Checking ${this.bucketName} for existing ${npmPackageName} registry entry.`,
@@ -43,6 +51,17 @@ export class S3Cache {
       });
   }
 
+  /*
+   * Generator that returns an async iterable with all npm package keys in the cache.
+   *
+   * Clients can access the package names with following code:
+   *
+   * <pre>
+   * for await (const packageName of s3Cache.list()) {
+   *   // do stuff
+   * }
+   * </pre>
+   */
   async *list(): any {
     const opts = {
       Bucket: this.bucketName,

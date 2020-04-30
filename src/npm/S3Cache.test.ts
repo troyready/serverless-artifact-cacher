@@ -13,9 +13,10 @@ describe("S3Cache", () => {
     const getStub = sinon.stub();
     getStub.returns({ promise: () => Promise.resolve({ Body }) });
 
-    const cache: S3Cache = new S3Cache();
-    cache.bucketName = "bucketName";
-    cache.s3 = { getObject: getStub, putObject: putStub } as any;
+    const cache: S3Cache = new S3Cache(
+      { getObject: getStub, putObject: putStub } as any,
+      "bucketName",
+    );
     await cache.put("foo", registryEntry);
     const actual = await cache.get("foo");
 
@@ -41,9 +42,10 @@ describe("S3Cache", () => {
           CommonPrefixes: [{ Prefix: "foo/" }],
         }),
     });
-    const cache: S3Cache = new S3Cache();
-    cache.bucketName = "bucketName";
-    cache.s3 = { listObjectsV2: listStub } as any;
+    const cache: S3Cache = new S3Cache(
+      { listObjectsV2: listStub } as any,
+      "bucketName",
+    );
     const list: string[] = [];
     for await (const key of cache.list()) {
       list.push(key);

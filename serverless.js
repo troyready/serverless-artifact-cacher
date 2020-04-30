@@ -78,7 +78,19 @@ async function getConfig() {
       "environment": {
         "BUCKET_NAME": {
           "Ref": npmStorageBucketResourceName
-        }
+        },
+        "NPM_CACHE_DOWNLOAD_URI": {
+          "Fn::Join": [
+            "",
+            ["https://",
+             {"Ref": "ApiGatewayRestApi"},
+             ".execute-api.",
+             {"Ref": "AWS::Region"},
+             ".",
+             {"Ref": "AWS::URLSuffix"},
+             "/${opt:stage}/npm-dlredirect"]
+          ]
+        }        
       },
       "iamRoleStatements": [
         {

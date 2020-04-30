@@ -1,14 +1,19 @@
 import * as request from "request-promise-native";
 import { S3Cache } from "./S3Cache";
 
+/*
+ * An NPM package with all necessary functions to manage its state in the cache.
+ */
 export class NpmPackage {
-  cache: S3Cache = new S3Cache();
+  downloadUriPrefix: string;
 
   constructor(
-    cacheUriPrefix: string,
+    public cache: S3Cache,
+    public cacheUriPrefix: string,
     public npmPackageName: string,
-    public downloadUriPrefix: string = `${cacheUriPrefix}/${npmPackageName}`,
-  ) {}
+  ) {
+    this.downloadUriPrefix = `${cacheUriPrefix}/${npmPackageName}`;
+  }
 
   getVersionUri(version: string): string {
     return `${this.downloadUriPrefix}/${version}`;
