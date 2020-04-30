@@ -45,10 +45,6 @@ export class NpmPackage {
 
   /**
    * Get or create DDB entry with map of files for package and return it
-   *
-   * Registry data is stored compressed in DDB for 2 reasons:
-   * 1) Not all registry data maps cleanly to a DDB item (e.g. empty strings)
-   * 2) Some items (e.g. @types/node) have too much data to store uncompressed
    */
   getRegistryEntry(): Promise<string> {
     return this.getRegistryEntryFromCache().catch(error =>
