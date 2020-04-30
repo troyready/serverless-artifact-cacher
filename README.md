@@ -86,12 +86,14 @@ Requests for a previously retrieved package are served solely from the cache, so
 
 The schedule can be adjusted in `serverless.js` (search for `rate(24 hours)`), and the update process can be triggered at any time by invoking the AutoUpdate functions.
 
-### Cached Versions
+### Cached PIP Versions
 
 The DynamoDB table for each repository stores an item for each cached package. New upstream entries will be automatically added daily (see "Automatic Updates")
 
-#### Displaying Cached NPM Versions
+#### Cached NPM Versions
 
-The NPM DynamoDB data is stored zlib compressed. It can be viewed via any zlib inflate mechanism, e.g.:
-* http://www.unit-conversion.info/texttools/compress/ (select "Decompress" in the Convert menu)
-* On the command line: `echo 'COMPRESSEDDDBDATAHERE' | base64 -d | python -c "import zlib,sys;sys.stdout.write(zlib.decompress(sys.stdin.read()))"`
+The NPM data is stored gzip format. It can be downloaded from s3bucket://${packageName}/index.gz.
+- Download the file and from the GUI click on "Decompress" in the Convert menu.
+- From the command line type `gzip -kd index.gz`
+
+New upstream entries will be automatically added daily (see "Automatic Updates")
