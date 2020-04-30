@@ -4,8 +4,8 @@
  * @packageDocumentation
  */
 import { Context, Handler, ScheduledEvent } from "aws-lambda";
-import { S3Cache } from '../S3Cache'
-import { NpmPackage } from '../NpmPackage'
+import { S3Cache } from "../S3Cache";
+import { NpmPackage } from "../NpmPackage";
 import "source-map-support/register";
 
 const NPM_CACHE_DOWNLOAD_URI = process.env.NPM_CACHE_DOWNLOAD_URI!;
