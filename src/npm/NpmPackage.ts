@@ -60,7 +60,7 @@ export class NpmPackage {
     // Retrieve upstream registryData & DDB cached ddbData
     var [npmData, cachedData] = await Promise.all([
       this.getRegistryEntryFromNpm(),
-      this.getRegistryEntryFromCache().then(str => JSON.parse(str)),
+      this.getRegistryEntry().then(str => JSON.parse(str)),
     ]);
     let npmUpdate: number = Date.parse(npmData["modified"]);
     const cacheUpdate: number = Date.parse(cachedData["modified"]);

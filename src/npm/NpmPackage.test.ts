@@ -6,29 +6,33 @@ import { S3 } from "aws-sdk";
 import { S3Cache } from "./S3Cache";
 
 describe("NpmPackage", () => {
-  let npmPackage: any;
+  let npmPackage: NpmPackage;
+  let getRegistryEntryFromNpmStub: sinon.SinonStub;
+  let s3ListStub: sinon.SinonStub;
+  let s3GetObjectStub: sinon.SinonStub;
+  let s3PutObjectStub: sinon.SinonStub;
 
   beforeEach(() => {
-    const getRegistryEntryFromNpmStub = sinon.stub();
-    const s3ListStub = sinon.stub() as any;
-    const s3GetObjectStub = sinon.stub() as any;
-    const s3PutObjectStub = sinon.stub() as any;
     const cacheUriPrefix = "http://localhost";
     const npmPackageName = "lodash";
+    getRegistryEntryFromNpmStub = sinon.stub();
+    s3ListStub = sinon.stub();
+    s3GetObjectStub = sinon.stub();
+    s3PutObjectStub = sinon.stub();
     npmPackage = new NpmPackage(cacheUriPrefix, npmPackageName);
     npmPackage.getRegistryEntryFromNpm = getRegistryEntryFromNpmStub;
     npmPackage.cache = {
       list: s3ListStub,
       get: s3GetObjectStub,
       put: s3PutObjectStub,
-    } as S3Cache;
+    } as any;
   });
 
   describe("getRegistryEntry", () => {
     test("returns an existing registry entry", async () => {
       // prepare stub
       const metadata = { foo: "bar" };
-      npmPackage.cache.get.resolves(JSON.stringify(metadata));
+      s3GetObjectStub.resolves(JSON.stringify(metadata));
       // get registry entry
       const registryEntry: string = await npmPackage.getRegistryEntry();
       expect(JSON.parse(registryEntry)).toStrictEqual(metadata);
@@ -39,14 +43,14 @@ describe("NpmPackage", () => {
       const expectedRegistryEntry = {
         versions: { "1.0": { dist: { tarball: "tarball" } } },
       };
-      npmPackage.getRegistryEntryFromNpm.resolves(expectedRegistryEntry);
-      npmPackage.cache.get.rejects();
-      npmPackage.cache.put.resolves();
+      getRegistryEntryFromNpmStub.resolves(expectedRegistryEntry);
+      s3GetObjectStub.rejects();
+      s3PutObjectStub.resolves();
       // get registry entry
       const registryEntry: string = await npmPackage.getRegistryEntry();
-      sinon.assert.calledWith(npmPackage.cache.get, "lodash");
+      sinon.assert.calledWith(s3GetObjectStub, "lodash");
       sinon.assert.calledWith(
-        npmPackage.cache.put,
+        s3PutObjectStub,
         npmPackage.npmPackageName,
         JSON.stringify(expectedRegistryEntry),
       );
@@ -55,21 +59,31 @@ describe("NpmPackage", () => {
   });
 
   describe("update", () => {
-    test("fails if there's no cached npm package", () => {
-      npmPackage.cache.get.rejects();
-      return expect(npmPackage.updateRegistryEntry()).rejects.toThrow();
+    // this verifies a seamless migration from ddb to s3
+    // when update is called then the registry entry is stored in s3
+    test("must not fail if the entry is not cached", async () => {
+      const modified = new Date().toISOString();
+      s3GetObjectStub.rejects();
+      s3PutObjectStub.resolves();
+      const expectedRegistryEntry = {
+        modified,
+        versions: { "1.0": { dist: { tarball: "tarball" } } },
+      };
+      getRegistryEntryFromNpmStub.resolves(expectedRegistryEntry);
+      await npmPackage.updateRegistryEntry();
+      expect(s3PutObjectStub.getCalls().length).toBe(1);
     });
 
     test("cache is not updated if not stale", async () => {
       const modified = new Date().toISOString();
-      npmPackage.cache.get.resolves(JSON.stringify({ modified }));
-      npmPackage.getRegistryEntryFromNpm.resolves({ modified });
+      s3GetObjectStub.resolves(JSON.stringify({ modified }));
+      getRegistryEntryFromNpmStub.resolves({ modified });
       await npmPackage.updateRegistryEntry();
-      sinon.assert.notCalled(npmPackage.cache.put);
+      sinon.assert.notCalled(s3PutObjectStub);
     });
 
     test("existing cache entries remain unchanged", async () => {
-      npmPackage.cache.get.resolves(
+      s3GetObjectStub.resolves(
         JSON.stringify({
           modified: new Date(0).toISOString(),
           versions: {
@@ -77,16 +91,16 @@ describe("NpmPackage", () => {
           },
         }),
       );
-      npmPackage.getRegistryEntryFromNpm.resolves({
+      getRegistryEntryFromNpmStub.resolves({
         modified: new Date(1).toISOString(),
         versions: {
           "1.0": { dist: { key: "bar" } },
         },
       });
-      npmPackage.cache.put.resolves();
+      s3PutObjectStub.resolves();
       await npmPackage.updateRegistryEntry();
-      sinon.assert.calledOnce(npmPackage.cache.put);
-      const args = npmPackage.cache.put.getCalls()[0].args;
+      sinon.assert.calledOnce(s3PutObjectStub);
+      const args = s3PutObjectStub.getCalls()[0].args;
       expect(args[0]).toBe("lodash");
       expect(JSON.parse(args[1])).toStrictEqual({
         modified: "1970-01-01T00:00:00.001Z",
@@ -102,7 +116,7 @@ describe("NpmPackage", () => {
     });
 
     test("new entries are appended", async () => {
-      npmPackage.cache.get.resolves(
+      s3GetObjectStub.resolves(
         JSON.stringify({
           modified: new Date(0).toISOString(),
           versions: {
@@ -110,15 +124,15 @@ describe("NpmPackage", () => {
           },
         }),
       );
-      npmPackage.getRegistryEntryFromNpm.resolves({
+      getRegistryEntryFromNpmStub.resolves({
         modified: new Date(1).toISOString(),
         versions: {
           "2.0": { dist: {} },
         },
       });
-      npmPackage.cache.put.resolves();
+      s3PutObjectStub.resolves();
       await npmPackage.updateRegistryEntry();
-      const args = npmPackage.cache.put.getCalls()[0].args;
+      const args = s3PutObjectStub.getCalls()[0].args;
       expect(args[0]).toBe("lodash");
       expect(JSON.parse(args[1])).toStrictEqual({
         modified: "1970-01-01T00:00:00.001Z",
