@@ -1,6 +1,10 @@
 # Serverless Artifact Cacher
 
-[![Build Status](https://travis-ci.org/troyready/serverless-artifact-cacher.svg?branch=master)](https://travis-ci.org/troyready/serverless-artifact-cacher)
+## Deprecation Notice
+
+This project is retired. It is recommended to use a service like [AWS CodeArtifact](https://docs.aws.amazon.com/codeartifact/latest/ug/welcome.html) instead.
+
+## Old Overview
 
 This project deploys a [Serverless](https://serverless.com/cli/) artifact caching service. It currently supports transparent caching of:
 
